@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { createClient } from "@/lib/supabase/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,21 +21,24 @@ export const metadata: Metadata = {
   description: "A premium wishlist experience",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <html lang="en">
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground flex min-h-screen`}
       >
-        <Sidebar className="hidden md:flex w-64 border-r border-border h-screen sticky top-0" />
+        <Sidebar user={user} className="hidden md:flex w-64 border-r border-border h-screen sticky top-0" />
 
         <div className="flex-1 flex flex-col min-h-screen relative">
-          <Header className="md:hidden" /> {/* Mobile Header */}
+          <Header user={user} className="md:hidden" /> {/* Mobile Header */}
           <main className="flex-1 px-4 pt-16 md:pt-8 md:px-8 max-w-7xl mx-auto w-full">
             {children}
           </main>

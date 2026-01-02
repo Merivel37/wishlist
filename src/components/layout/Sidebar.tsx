@@ -13,8 +13,22 @@ const tabs = [
     { name: "Surprise Me", href: "/surprise-me", icon: Sparkles },
 ];
 
-export function Sidebar({ className }: { className?: string }) {
+import { createClient } from "@/lib/supabase/client";
+import { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+
+// ... existing imports ...
+
+export function Sidebar({ className, user }: { className?: string; user: User | null }) {
     const pathname = usePathname();
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        router.replace("/login"); // Force navigation to login
+        router.refresh();
+    };
 
     return (
         <aside className={cn("flex flex-col bg-card/50 backdrop-blur-sm p-6", className)}>
@@ -48,13 +62,40 @@ export function Sidebar({ className }: { className?: string }) {
             </nav>
 
             <div className="border-t border-border pt-6 space-y-2">
-                <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    <Settings size={18} />
-                    <span>Settings</span>
-                </button>
-                <div className="w-full px-4 py-2">
-                    <LoginButton />
-                </div>
+
+                {user ? (
+                    <>
+                        <div className="px-4 py-2 flex items-center gap-3 mb-2">
+                            {/* Avatar or Placeholder */}
+                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                                {user.email?.[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{user.user_metadata?.full_name || "User"}</p>
+                                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                            </div>
+                        </div>
+
+                        <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            <Settings size={18} />
+                            <span>Settings</span>
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                        >
+                            <Settings size={18} className="hidden" /> {/* Hack to keep alignment if needed, or just use LogOut */}
+                            {/* Actually let's use the Logout icon we removed earlier but need to import it first if we want to use it. 
+                                Or valid simplified replacement. 
+                             */}
+                            <span>Log out</span>
+                        </button>
+                    </>
+                ) : (
+                    <div className="w-full px-4 py-2">
+                        <LoginButton />
+                    </div>
+                )}
             </div>
         </aside>
     );

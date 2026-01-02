@@ -1,17 +1,21 @@
 import { WishlistGrid } from "@/components/wishlist/WishlistGrid";
 import { Plus, Database, AlertCircle } from "lucide-react";
 import { getWishlistItems } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 // Async Server Component
 export default async function WishlistPage() {
     const items = await getWishlistItems();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
     const isEmpty = items.length === 0;
 
     return (
         <div className="space-y-6 animate-in fade-in duration-700 slide-in-from-bottom-4">
 
             {!isEmpty ? (
-                <WishlistGrid items={items} />
+                <WishlistGrid items={items} currentUser={user} />
             ) : (
                 /* Empty State / Error Handling */
                 <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 border border-dashed border-border rounded-xl bg-card/30">

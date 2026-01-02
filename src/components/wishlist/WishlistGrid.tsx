@@ -6,8 +6,11 @@ import { ItemCard } from "./ItemCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpDown, Check, ChevronDown } from "lucide-react";
 
+import { User } from "@supabase/supabase-js";
+
 interface WishlistGridProps {
     items: WishlistItem[];
+    currentUser: User | null;
 }
 
 type SortOption = "Freshness" | "Date Added" | "Price: Low to High" | "Price: High to Low" | "Name";
@@ -15,7 +18,7 @@ type FilterOption = "All" | "Hot" | "Under £50" | "Unclaimed" | "Tech" | "Home"
 
 const FRESHNESS_ORDER = { Hot: 3, Warm: 2, Cold: 1 };
 
-export function WishlistGrid({ items }: WishlistGridProps) {
+export function WishlistGrid({ items, currentUser }: WishlistGridProps) {
     const [filter, setFilter] = useState<FilterOption>("All");
     const [sortBy, setSortBy] = useState<SortOption>("Date Added");
     const [isSortOpen, setIsSortOpen] = useState(false);
@@ -140,7 +143,7 @@ export function WishlistGrid({ items }: WishlistGridProps) {
             >
                 <AnimatePresence mode="popLayout">
                     {filteredAndSortedItems.map((item) => (
-                        <ItemCard key={item.id} item={item} />
+                        <ItemCard key={item.id} item={item} currentUser={currentUser} />
                     ))}
                 </AnimatePresence>
             </motion.div>
