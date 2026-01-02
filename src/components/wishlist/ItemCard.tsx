@@ -100,7 +100,10 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
                         src={item.photoUrl}
                         alt={item.name}
                         fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        className={cn(
+                            "object-cover transition-transform duration-700 group-hover:scale-105",
+                            item.isClaimed && "grayscale-[50%]" // Slight greyscale when claimed
+                        )}
                         onError={() => setImageError(true)}
                     />
                 ) : (
