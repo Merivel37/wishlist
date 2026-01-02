@@ -1,14 +1,15 @@
+```javascript
 "use client";
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ExternalLink, ShoppingBag, Image as ImageIcon, Loader2, MoreVertical, RefreshCcw, Trash2, Pencil, Archive } from "lucide-react";
+import { ExternalLink, ShoppingBag, Image as ImageIcon, Loader2, MoreVertical, RefreshCcw, Trash2, Pencil, Archive, Check, X } from "lucide-react";
 import Image from "next/image";
 import { WishlistItem } from "@/types/schema";
 import { cn } from "@/lib/utils";
 
 import { User } from "@supabase/supabase-js";
-import { claimItem, updateStatus, updateItemTitle } from "@/app/actions";
+import { claimItem, updateStatus, updateItemTitle, unclaimItem } from "@/app/actions";
 
 interface ItemCardProps {
     item: WishlistItem;
@@ -53,6 +54,16 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
         setIsClaiming(false);
     };
 
+    const handleUnclaim = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!currentUser) return;
+
+        setIsClaiming(true); // Re-use loading state
+        await unclaimItem(item.id);
+        setIsClaiming(false);
+    };
+
     const handleStatusUpdate = async (type: "Archive" | "Active" | "Purchased") => {
         setIsUpdating(true);
         setShowMenu(false);
@@ -60,7 +71,7 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
         if (type === "Archive") {
             await updateStatus(item.id, { status: "Archived" });
         } else if (type === "Active") {
-            await updateStatus(item.id, { status: "Active", purchaseStatus: "Unpurchased" });
+            await updateStatus(item.id, { status: "Active", purchaseStatus: "Unpurchased" }); 
         } else if (type === "Purchased") {
             await updateStatus(item.id, { purchaseStatus: "Purchased" });
         }
@@ -91,7 +102,7 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: isPurchased && !isArchiveView ? 0.6 : 1, scale: 1, filter: isPurchased && !isArchiveView ? "grayscale(100%)" : "none" }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className={`group relative bg-card rounded-2xl overflow-hidden border border-border/50 hover:shadow-lg transition-all duration-300 flex flex-col h-full`}
+            className={`group relative bg - card rounded - 2xl overflow - hidden border border - border / 50 hover: shadow - lg transition - all duration - 300 flex flex - col h - full`}
         >
             {/* Image Section */}
             <div className="relative aspect-[4/5] overflow-hidden bg-muted">
@@ -143,59 +154,67 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
                     </div>
                 )}
 
-                {/* BLUE Claimed By You Button (Centered Overlay as requested) */}
+                {/* BLUE Claimed By You Button (Hover to Unclaim) */}
                 {isClaimedByMe && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-xl border border-blue-400/20 tracking-wide">
-                            Claimed by You
-                        </div>
+                     <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+                        <button 
+                            onClick={handleUnclaim}
+                            className="group/unclaim px-5 py-2 bg-blue-600 hover:bg-red-600 text-white rounded-xl text-sm font-bold shadow-xl border border-white/10 tracking-wide transition-all duration-300 hover:scale-105 w-[140px]"
+                        >
+                            <span className="block group-hover/unclaim:hidden flex items-center justify-center gap-2">
+                                Claimed
+                            </span>
+                            <span className="hidden group-hover/unclaim:flex items-center justify-center gap-2">
+                                <X size={14} strokeWidth={3} /> Unclaim
+                            </span>
+                        </button>
                     </div>
                 )}
 
                 {/* Action Menu (Top Left) */}
                 {currentUser && (
                     <div className="absolute top-3 left-3 z-30">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+                         <button 
+                            onClick={(e) => {e.stopPropagation(); setShowMenu(!showMenu)}}
                             className="p-1.5 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-sm transition-colors"
-                        >
+                         >
                             <MoreVertical size={16} />
-                        </button>
-
-                        {showMenu && (
+                         </button>
+                         
+                         {showMenu && (
                             <>
-                                <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
-                                <div className="absolute top-full left-0 mt-2 w-40 bg-card border border-border rounded-xl shadow-xl z-30 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                                    {!isArchiveView && !isPurchased && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate("Purchased"); }}
-                                            disabled={isUpdating}
-                                            className="w-full text-left px-3 py-2 text-xs hover:bg-muted flex items-center gap-2"
-                                        >
-                                            <ShoppingBag size={14} /> Mark Purchased
-                                        </button>
-                                    )}
-                                    {!isArchiveView && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate("Archive"); }}
-                                            disabled={isUpdating}
-                                            className="w-full text-left px-3 py-2 text-xs hover:bg-muted flex items-center gap-2 text-orange-500"
-                                        >
-                                            <Archive size={14} /> Archive
-                                        </button>
-                                    )}
-                                    {(isArchiveView || isPurchased) && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate("Active"); }}
-                                            disabled={isUpdating}
-                                            className="w-full text-left px-3 py-2 text-xs hover:bg-muted flex items-center gap-2 text-green-500"
-                                        >
-                                            <RefreshCcw size={14} /> Reactivate
-                                        </button>
-                                    )}
-                                </div>
+                            <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
+                            <div className="absolute top-full left-0 mt-2 w-48 bg-card/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-2xl z-30 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                {!isArchiveView && !isPurchased && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate("Purchased"); }}
+                                        disabled={isUpdating}
+                                        className="w-full text-left px-4 py-2.5 text-xs hover:bg-muted/50 flex items-center gap-2 font-medium transition-colors"
+                                    >
+                                        <ShoppingBag size={14} /> Mark Purchased
+                                    </button>
+                                )}
+                                {!isArchiveView && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate("Archive"); }}
+                                        disabled={isUpdating}
+                                        className="w-full text-left px-4 py-2.5 text-xs hover:bg-muted/50 flex items-center gap-2 text-destructive font-medium transition-colors"
+                                    >
+                                        <Archive size={14} /> Archive
+                                    </button>
+                                )}
+                                {(isArchiveView || isPurchased) && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate("Active"); }}
+                                        disabled={isUpdating}
+                                        className="w-full text-left px-4 py-2.5 text-xs hover:bg-muted/50 flex items-center gap-2 text-green-600 font-medium transition-colors"
+                                    >
+                                        <RefreshCcw size={14} /> Reactivate Item
+                                    </button>
+                                )}
+                            </div>
                             </>
-                        )}
+                         )}
                     </div>
                 )}
             </div>

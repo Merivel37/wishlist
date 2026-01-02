@@ -40,6 +40,22 @@ export async function claimItem(itemId: string) {
     return false;
 }
 
+// NEW: Unclaim Item
+export async function unclaimItem(itemId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("The Wish List")
+        .update({ claimed_user: null }) // Set to NULL to unclaim
+        .eq("product_id", itemId);
+
+    if (!error) {
+        revalidatePath("/wishlist");
+        return true;
+    }
+    return false;
+}
+
 export async function updateStatus(itemId: string, updates: { status?: "Active" | "Archived"; purchaseStatus?: string }) {
     const supabase = await createClient();
     const dbUpdates: any = {};
@@ -60,13 +76,12 @@ export async function updateStatus(itemId: string, updates: { status?: "Active" 
     return false;
 }
 
-// NEW: Update Title
 export async function updateItemTitle(itemId: string, newTitle: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
         .from("The Wish List")
-        .update({ item: newTitle }) // 'item' is the column name for Name
+        .update({ item: newTitle })
         .eq("product_id", itemId);
 
     if (!error) {
