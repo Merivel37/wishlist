@@ -4,27 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function tagItem(itemId: string, action: "keep" | "pass") {
-    // Map Swipe Action to Sheet Status
-    // Pass -> "Archived" (so it hopefully gets filtered out or just tagged)
-    // Keep -> "Active" (or maybe distinct "Saved"?)
-
-    // User Request:
-    // Left (X) -> Tag as 'Archived'
-    // Right (Heart) -> Tag as 'Active'
     const supabase = await createClient();
-
     const newStatus = action === "pass" ? "Archived" : "Active";
 
-    console.log(`Server Action: Tagging item ${itemId} as ${newStatus}`);
-
-    // Using Supabase directly here instead of lib helper to ensure we use the server client with cookies if needed,
-    // though the helper was refactored. Let's use the helper if we can, or direct.
-    // Actually, I refactored `updateItemStatus` in lib/supabase.ts to use `createClient` from server.
-    // So let's just use that helper? 
-    // Wait, `updateItemStatus` only updates status.
-    // I need `claimItem` which updates `claimed_user`.
-
-    // Let's implement directly here for simplicity and power.
     const { error } = await supabase
         .from("The Wish List")
         .update({ status: newStatus })
@@ -33,9 +15,10 @@ export async function tagItem(itemId: string, action: "keep" | "pass") {
     if (!error) {
         revalidatePath("/wishlist");
         revalidatePath("/surprise-me");
+        revalidatePath("/archive");
+        revalidatePath("/trash");
         return true;
     }
-    console.error("Error tagging item:", error);
     return false;
 }
 
@@ -43,28 +26,54 @@ export async function claimItem(itemId: string) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user || !user.email) {
-        console.error("Unauthorized claim attempt");
-        return false;
-    }
-
-    console.log(`Server Action: User ${user.email} claiming item ${itemId}`);
+    if (!user || !user.email) return false;
 
     const { error } = await supabase
         .from("The Wish List")
-        .update({
-            claimed_user: user.email,
-            // Optionally set purchase_status?
-            // purchase_status: "Reserved"? 
-            // User requirement: "Store the logged-in user's email in 'claimed_user' column"
-        })
+        .update({ claimed_user: user.email })
         .eq("product_id", itemId);
 
     if (!error) {
         revalidatePath("/wishlist");
         return true;
     }
+    return false;
+}
 
-    console.error("Error claiming item:", error);
+export async function updateStatus(itemId: string, updates: { status?: "Active" | "Archived"; purchaseStatus?: string }) {
+    const supabase = await createClient();
+    const dbUpdates: any = {};
+    if (updates.status) dbUpdates.status = updates.status;
+    if (updates.purchaseStatus) dbUpdates.purchase_status = updates.purchaseStatus;
+
+    const { error } = await supabase
+        .from("The Wish List")
+        .update(dbUpdates)
+        .eq("product_id", itemId);
+
+    if (!error) {
+        revalidatePath("/wishlist");
+        revalidatePath("/archive");
+        revalidatePath("/trash");
+        return true;
+    }
+    return false;
+}
+
+// NEW: Update Title
+export async function updateItemTitle(itemId: string, newTitle: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("The Wish List")
+        .update({ item: newTitle }) // 'item' is the column name for Name
+        .eq("product_id", itemId);
+
+    if (!error) {
+        revalidatePath("/wishlist");
+        revalidatePath("/archive");
+        revalidatePath("/trash");
+        return true;
+    }
     return false;
 }

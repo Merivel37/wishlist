@@ -12,6 +12,7 @@ export interface WishlistItem {
     freshness: Freshness;
     createdAt: string;
     brand?: string;
+    status?: "Active" | "Archived";
     purchaseStatus?: string;
     claimedBy?: string;
     category?: string;

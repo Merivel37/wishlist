@@ -9,13 +9,19 @@ export default async function WishlistPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    const isEmpty = items.length === 0;
+    // FILTER: Show items that are "Active" AND "Not Purchased"
+    // (Logic: If status is Archived OR purchaseStatus is Purchased, exclude it)
+    const activeItems = items.filter(item =>
+        item.status === "Active" && item.purchaseStatus !== "Purchased"
+    );
+
+    const isEmpty = activeItems.length === 0;
 
     return (
         <div className="space-y-6 animate-in fade-in duration-700 slide-in-from-bottom-4">
 
             {!isEmpty ? (
-                <WishlistGrid items={items} currentUser={user} />
+                <WishlistGrid items={activeItems} currentUser={user} />
             ) : (
                 /* Empty State / Error Handling */
                 <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 border border-dashed border-border rounded-xl bg-card/30">

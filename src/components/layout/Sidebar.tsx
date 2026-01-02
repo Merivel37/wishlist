@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { List, Zap, Users, Sparkles, Settings } from "lucide-react";
+import { List, Zap, Users, Sparkles, Settings, Archive, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LoginButton from "@/components/auth/LoginButton";
 
@@ -11,6 +11,8 @@ const tabs = [
     { name: "Obsessions", href: "/obsessions", icon: Zap },
     { name: "Sharing", href: "/share", icon: Users },
     { name: "Surprise Me", href: "/surprise-me", icon: Sparkles },
+    { name: "Archive", href: "/archive", icon: Archive },
+    { name: "Trash", href: "/trash", icon: Trash2 },
 ];
 
 import { createClient } from "@/lib/supabase/client";

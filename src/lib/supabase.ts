@@ -42,6 +42,7 @@ export const getWishlistItems = async (): Promise<WishlistItem[]> => {
                 freshness: mapPriorityToFreshness(Number(row.freshness) || 3), // Mapped from 'freshness' (1-5)
                 createdAt: row.timestamp || new Date().toISOString(),
                 brand: row.brand || "",
+                status: row.status === "Archived" ? "Archived" : "Active",
                 purchaseStatus: purchaseStatus,
                 claimedBy: row.claimed_user || "",
                 category: row.section || "General",

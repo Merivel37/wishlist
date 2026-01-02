@@ -1,34 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ExternalLink, Flame, Search, Image as ImageIcon, Loader2 } from "lucide-react";
+import { ExternalLink, ShoppingBag, Image as ImageIcon, Loader2, MoreVertical, RefreshCcw, Trash2, Pencil, Archive } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { WishlistItem } from "@/types/schema";
 import { cn } from "@/lib/utils";
 
 import { User } from "@supabase/supabase-js";
-import { claimItem } from "@/app/actions";
+import { claimItem, updateStatus, updateItemTitle } from "@/app/actions";
 
 interface ItemCardProps {
     item: WishlistItem;
     currentUser: User | null;
+    isArchiveView?: boolean;
 }
 
-const freshnessColors = {
+const freshnessColors: Record<string, string> = {
     Hot: "bg-red-500 text-white shadow-red-500/20",
     Warm: "bg-orange-400 text-white shadow-orange-400/20",
     Cold: "bg-blue-400 text-white shadow-blue-400/20",
 };
 
-export function ItemCard({ item, currentUser }: ItemCardProps) {
+export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
     const [imageError, setImageError] = useState(false);
     const [isClaiming, setIsClaiming] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
 
-    const isGreyedOut = item.purchaseStatus === "Purchased";
-    // Check if claimed by current user (simple email match for now)
+    // Edit Title State
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [editedTitle, setEditedTitle] = useState(item.name);
+    const titleInputRef = useRef<HTMLInputElement>(null);
+
+    const isPurchased = item.purchaseStatus === "Purchased";
+    // Check if claimed by current user
     const isClaimedByMe = currentUser?.email && item.claimedBy === currentUser.email;
+
+    useEffect(() => {
+        if (isEditingTitle && titleInputRef.current) {
+            titleInputRef.current.focus();
+        }
+    }, [isEditingTitle]);
 
     const handleClaim = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -40,15 +53,45 @@ export function ItemCard({ item, currentUser }: ItemCardProps) {
         setIsClaiming(false);
     };
 
+    const handleStatusUpdate = async (type: "Archive" | "Active" | "Purchased") => {
+        setIsUpdating(true);
+        setShowMenu(false);
+
+        if (type === "Archive") {
+            await updateStatus(item.id, { status: "Archived" });
+        } else if (type === "Active") {
+            await updateStatus(item.id, { status: "Active", purchaseStatus: "Unpurchased" });
+        } else if (type === "Purchased") {
+            await updateStatus(item.id, { purchaseStatus: "Purchased" });
+        }
+        setIsUpdating(false);
+    }
+
+    const handleTitleSave = async () => {
+        if (editedTitle.trim() !== item.name) {
+            await updateItemTitle(item.id, editedTitle);
+        }
+        setIsEditingTitle(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter") {
+            handleTitleSave();
+        } else if (e.key === "Escape") {
+            setEditedTitle(item.name);
+            setIsEditingTitle(false);
+        }
+    };
+
     if (imageError) return null;
 
     return (
         <motion.div
             layout
             initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: isGreyedOut ? 0.6 : 1, scale: 1, filter: isGreyedOut ? "grayscale(100%)" : "none" }}
+            animate={{ opacity: isPurchased && !isArchiveView ? 0.6 : 1, scale: 1, filter: isPurchased && !isArchiveView ? "grayscale(100%)" : "none" }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className={`group relative bg-card rounded-2xl overflow-hidden border border-border/50 hover:shadow-lg transition-all duration-300 flex flex-col h-full ${isGreyedOut ? "pointer-events-none" : ""}`}
+            className={`group relative bg-card rounded-2xl overflow-hidden border border-border/50 hover:shadow-lg transition-all duration-300 flex flex-col h-full`}
         >
             {/* Image Section */}
             <div className="relative aspect-[4/5] overflow-hidden bg-muted">
@@ -71,18 +114,85 @@ export function ItemCard({ item, currentUser }: ItemCardProps) {
                 <div className="absolute top-3 right-3 flex gap-2">
                     <div className={cn(
                         "px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-lg backdrop-blur-md",
-                        freshnessColors[item.freshness]
+                        freshnessColors[item.freshness || "Cold"]
                     )}>
                         {item.freshness}
                     </div>
                 </div>
 
-                {/* Claimed Overlay/Badge */}
-                {item.isClaimed && (
+                {/* Trash Icon (Discrete Hover) */}
+                {currentUser && !isArchiveView && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate("Archive"); }}
+                        className="absolute bottom-3 right-3 p-2 bg-black/40 text-white/70 hover:text-red-400 hover:bg-black/60 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 scale-90 hover:scale-100 cursor-pointer z-20"
+                        title="Move to Trash"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                )}
+
+                {/* Claimed Overlay (Only if NOT claimed by me, so we see "Claimed" by others overlay) */}
+                {item.isClaimed && !isClaimedByMe && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px]">
                         <div className="px-3 py-1 bg-background/90 text-foreground rounded-full text-xs font-bold shadow-xl border border-border/50">
-                            {isClaimedByMe ? "Claimed by You" : "Claimed"}
+                            Claimed by {item.claimedBy?.split('@')[0]}
                         </div>
+                    </div>
+                )}
+
+                {/* BLUE Claimed By You Button (Centered Overlay as requested) */}
+                {isClaimedByMe && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-xl border border-blue-400/20 tracking-wide">
+                            Claimed by You
+                        </div>
+                    </div>
+                )}
+
+                {/* Action Menu (Top Left) */}
+                {currentUser && (
+                    <div className="absolute top-3 left-3 z-30">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+                            className="p-1.5 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-sm transition-colors"
+                        >
+                            <MoreVertical size={16} />
+                        </button>
+
+                        {showMenu && (
+                            <>
+                                <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
+                                <div className="absolute top-full left-0 mt-2 w-40 bg-card border border-border rounded-xl shadow-xl z-30 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                    {!isArchiveView && !isPurchased && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate("Purchased"); }}
+                                            disabled={isUpdating}
+                                            className="w-full text-left px-3 py-2 text-xs hover:bg-muted flex items-center gap-2"
+                                        >
+                                            <ShoppingBag size={14} /> Mark Purchased
+                                        </button>
+                                    )}
+                                    {!isArchiveView && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate("Archive"); }}
+                                            disabled={isUpdating}
+                                            className="w-full text-left px-3 py-2 text-xs hover:bg-muted flex items-center gap-2 text-orange-500"
+                                        >
+                                            <Archive size={14} /> Archive
+                                        </button>
+                                    )}
+                                    {(isArchiveView || isPurchased) && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate("Active"); }}
+                                            disabled={isUpdating}
+                                            className="w-full text-left px-3 py-2 text-xs hover:bg-muted flex items-center gap-2 text-green-500"
+                                        >
+                                            <RefreshCcw size={14} /> Reactivate
+                                        </button>
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
@@ -90,11 +200,42 @@ export function ItemCard({ item, currentUser }: ItemCardProps) {
             {/* Content Section */}
             <div className="p-4 space-y-3 flex-1 flex flex-col">
                 <div>
-                    <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">{item.name}</h3>
-                        <span className="font-mono text-sm font-semibold text-muted-foreground">
-                            {item.currency}{item.price}
-                        </span>
+                    <div className="flex justify-between items-start group/title relative">
+                        {isEditingTitle ? (
+                            <input
+                                ref={titleInputRef}
+                                value={editedTitle}
+                                onChange={(e) => setEditedTitle(e.target.value)}
+                                onBlur={handleTitleSave}
+                                onKeyDown={handleKeyDown}
+                                onClick={(e) => e.stopPropagation()}
+                                className="font-bold text-lg leading-tight bg-transparent border-b border-primary outline-none text-foreground w-full py-0"
+                            />
+                        ) : (
+                            <>
+                                <h3
+                                    className="font-bold text-lg leading-tight group-hover:text-primary transition-colors pr-6 cursor-text"
+                                    onClick={(e) => { if (currentUser) { e.stopPropagation(); setIsEditingTitle(true); } }}
+                                >
+                                    {item.name}
+                                </h3>
+                                {/* Pencil Icon on Hover */}
+                                {currentUser && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setIsEditingTitle(true); }}
+                                        className="absolute right-0 top-0 p-1 text-muted-foreground hover:text-primary opacity-0 group-hover/title:opacity-100 transition-opacity"
+                                    >
+                                        <Pencil size={14} />
+                                    </button>
+                                )}
+                            </>
+                        )}
+
+                        {!isEditingTitle && (
+                            <span className="font-mono text-sm font-semibold text-muted-foreground ml-2 whitespace-nowrap">
+                                {item.currency}{item.price}
+                            </span>
+                        )}
                     </div>
                     {item.brand && <p className="text-xs text-muted-foreground font-medium mt-1">{item.brand}</p>}
                 </div>
@@ -104,12 +245,12 @@ export function ItemCard({ item, currentUser }: ItemCardProps) {
                 {/* Footer Actions/Info */}
                 <div className="pt-2 flex items-center justify-between border-t border-border/40 mt-3 text-xs text-muted-foreground gap-2">
 
-                    {/* Claim Button */}
+                    {/* Claim Button - BLUE as requested */}
                     {!item.isClaimed && currentUser ? (
                         <button
                             onClick={handleClaim}
                             disabled={isClaiming}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold transition-colors disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-blue-600 text-white hover:bg-blue-700 font-bold shadow-md shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
                         >
                             {isClaiming ? <Loader2 size={12} className="animate-spin" /> : "Claim"}
                         </button>

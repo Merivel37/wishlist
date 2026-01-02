@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { List, Zap, Users, Sparkles } from "lucide-react";
+import { List, Zap, Users, Sparkles, Archive } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -13,19 +13,19 @@ const tabs = [
         icon: List,
     },
     {
-        name: "Obsessions",
-        href: "/obsessions",
-        icon: Zap,
+        name: "Archive",
+        href: "/archive",
+        icon: Archive,
     },
     {
-        name: "Sharing",
-        href: "/share",
-        icon: Users,
-    },
-    {
-        name: "Surprise Me",
+        name: "Surprise",
         href: "/surprise-me",
         icon: Sparkles,
+    },
+    {
+        name: "Share",
+        href: "/share",
+        icon: Users,
     },
 ];
 
