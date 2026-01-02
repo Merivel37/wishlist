@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { List, Zap, Users, Sparkles, LogOut, Settings } from "lucide-react";
+import { List, Zap, Users, Sparkles, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import LoginButton from "@/components/auth/LoginButton";
 
 const tabs = [
     { name: "Wishlist", href: "/wishlist", icon: List },
@@ -51,10 +52,9 @@ export function Sidebar({ className }: { className?: string }) {
                     <Settings size={18} />
                     <span>Settings</span>
                 </button>
-                <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
-                    <LogOut size={18} />
-                    <span>Log out</span>
-                </button>
+                <div className="w-full px-4 py-2">
+                    <LoginButton />
+                </div>
             </div>
         </aside>
     );
