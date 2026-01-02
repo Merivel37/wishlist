@@ -248,8 +248,13 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
                 {/* Footer Actions/Info */}
                 <div className="pt-2 flex items-center justify-between border-t border-border/40 mt-3 text-xs text-muted-foreground gap-2">
 
-                    {/* Claim Button - BLUE as requested */}
-                    {!item.isClaimed && currentUser ? (
+                    {/* Claim Button / Purchased Stamp logic */}
+                    {isPurchased ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-600/20 text-green-600 border border-green-600/30 font-bold uppercase tracking-wide">
+                            <Check size={12} strokeWidth={3} />
+                            Purchased
+                        </div>
+                    ) : !item.isClaimed && currentUser ? (
                         <button
                             onClick={handleClaim}
                             disabled={isClaiming}
