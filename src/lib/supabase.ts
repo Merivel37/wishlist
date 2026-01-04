@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { WishlistItem, Freshness } from "@/types/schema";
+import { WishlistItem, Freshness, MediaItem, Restaurant, Recipe } from "@/types/schema";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -80,4 +80,98 @@ export const updateItemStatus = async (itemKey: string, newStatus: string) => {
         console.error("Error in updateItemStatus:", err);
         return false;
     }
+};
+
+export const getMediaItems = async (): Promise<MediaItem[]> => {
+    try {
+        const { data, error } = await supabase
+            .from("media_items")
+            .select("*")
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Supabase Fetch Error (Media):", error);
+            throw error;
+        }
+
+        if (!data) return [];
+
+        return data.map((row: any) => ({
+            id: row.id,
+            title: row.title,
+            type: row.type,
+            status: row.status,
+            url: row.url,
+            image: row.image,
+            tags: row.tags || [],
+            rating: row.rating,
+            review: row.review,
+            createdAt: row.created_at,
+        }));
+    } catch (err) {
+        console.error("Error in getMediaItems:", err);
+        return [];
+    }
+};
+
+export const addMediaItem = async (item: Partial<MediaItem>) => {
+    try {
+        const { error } = await supabase
+            .from("media_items")
+            .insert([{
+                title: item.title,
+                type: item.type,
+                status: item.status || 'queued',
+                url: item.url,
+                image: item.image,
+                tags: item.tags,
+                rating: item.rating,
+                review: item.review,
+            }]);
+
+        if (error) {
+            console.error("Supabase Insert Error (Media):", error);
+            return false;
+        }
+        return true;
+    } catch (err) {
+        console.error("Error in addMediaItem:", err);
+        return false;
+    }
+};
+
+export const getRestaurants = async (): Promise<Restaurant[]> => {
+    try {
+        const { data, error } = await supabase.from("restaurants").select("*").order('created_at', { ascending: false });
+        if (error) { console.error("Supabase Error (Restaurants):", error); throw error; }
+        return data ? data.map((r: any) => ({ ...r, priceRange: r.price_range, imageUrl: r.image_url, bookingUrl: r.booking_url, createdAt: r.created_at })) : [];
+    } catch (err) { return []; }
+};
+
+export const addRestaurant = async (item: Partial<Restaurant>) => {
+    try {
+        const { error } = await supabase.from("restaurants").insert([{
+            name: item.name, location: item.location, cuisine: item.cuisine, price_range: item.priceRange, rating: item.rating, review: item.review, booking_url: item.bookingUrl, status: item.status || 'wishlist', tags: item.tags, image_url: item.imageUrl
+        }]);
+        if (error) { console.error("Supabase Insert Error:", error); return false; }
+        return true;
+    } catch (err) { return false; }
+};
+
+export const getRecipes = async (): Promise<Recipe[]> => {
+    try {
+        const { data, error } = await supabase.from("recipes").select("*").order('created_at', { ascending: false });
+        if (error) { console.error("Supabase Error (Recipes):", error); throw error; }
+        return data ? data.map((r: any) => ({ ...r, imageUrl: r.image_url, sourceUrl: r.source_url, createdAt: r.created_at })) : [];
+    } catch (err) { return []; }
+};
+
+export const addRecipe = async (item: Partial<Recipe>) => {
+    try {
+        const { error } = await supabase.from("recipes").insert([{
+            title: item.title, ingredients: item.ingredients, method: item.method, image_url: item.imageUrl, source_url: item.sourceUrl, rating: item.rating, difficulty: item.difficulty
+        }]);
+        if (error) { console.error("Supabase Insert Error:", error); return false; }
+        return true;
+    } catch (err) { return false; }
 };

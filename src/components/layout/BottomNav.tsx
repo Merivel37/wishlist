@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { List, Zap, Users, Sparkles, Archive } from "lucide-react";
+import { List, Zap, Users, Sparkles, Archive, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,11 @@ const tabs = [
         name: "Surprise",
         href: "/surprise-me",
         icon: Sparkles,
+    },
+    {
+        name: "Library",
+        href: "/read-watch",
+        icon: BookOpen,
     },
     {
         name: "Share",
