@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { List, Zap, Users, Sparkles, Settings, Archive, Trash2, BookOpen, Utensils, ChefHat } from "lucide-react";
+import { List, Zap, Users, Sparkles, Settings, Archive, Trash2, BookOpen, Utensils, ChefHat, Tv } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LoginButton from "@/components/auth/LoginButton";
 
@@ -10,7 +10,8 @@ const tabs = [
     { name: "Wishlist", href: "/wishlist", icon: List },
     { name: "Obsessions", href: "/obsessions", icon: Zap },
     { name: "Sharing", href: "/share", icon: Users },
-    { name: "To Read & Watch", href: "/read-watch", icon: BookOpen },
+    { name: "To Read", href: "/read", icon: BookOpen },
+    { name: "To Watch", href: "/watch", icon: Tv },
     { name: "To Eat", href: "/eat", icon: Utensils },
     { name: "To Cook", href: "/cook", icon: ChefHat },
     { name: "Surprise Me", href: "/surprise-me", icon: Sparkles },

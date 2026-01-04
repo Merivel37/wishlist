@@ -30,11 +30,25 @@ export const getWishlistItems = async (): Promise<WishlistItem[]> => {
             // Logic: purchase_status preferred, else fallback to status column
             const purchaseStatus = row.purchase_status || (isActive ? "Active" : "Inactive");
 
+            // Robust Image Cleaning
+            let cleanPhotoUrl = "";
+            const rawImg = row.source_images;
+            if (rawImg && typeof rawImg === 'string') {
+                // If it's a comma separated string (e.g. multiple images), take the first one
+                let firstUrl = rawImg.split(',')[0].trim();
+                // Remove extra quotes if present
+                firstUrl = firstUrl.replace(/^["']|["']$/g, '');
+
+                if (firstUrl.startsWith('http')) {
+                    cleanPhotoUrl = firstUrl;
+                }
+            }
+
             return {
                 id: row.product_id?.toString() || `supa-${Math.random()}`,
-                name: row.item || "Unknown Item", // Mapped from 'item'
+                name: row.item || "Untitled Item", // Mapped from 'item'
                 description: row.description || "",
-                photoUrl: row.source_images || "", // Mapped from 'source_images'
+                photoUrl: cleanPhotoUrl, // Mapped from 'source_images'
                 price: typeof row.price === 'string' ? parseFloat(row.price.replace(/[£$]/g, "")) : (row.price || 0),
                 currency: "£",
                 storeLink: row.links || "", // Mapped from 'links'

@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/Header";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { Footer } from "@/components/layout/Footer";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function MainLayout({
@@ -20,6 +21,7 @@ export default async function MainLayout({
                 <main className="flex-1 px-4 pt-16 md:pt-8 md:px-8 max-w-7xl mx-auto w-full">
                     {children}
                 </main>
+                <Footer />
                 <BottomNav className="md:hidden" />
             </div>
         </div>

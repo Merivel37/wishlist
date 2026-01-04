@@ -34,23 +34,38 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
     const [editedTitle, setEditedTitle] = useState(item.name);
     const titleInputRef = useRef<HTMLInputElement>(null);
 
-    const isPurchased = item.purchaseStatus === "Purchased";
-    // Check if claimed by current user
-    const isClaimedByMe = currentUser?.email && item.claimedBy === currentUser.email;
+    // Optimistic State
+    const [optClaimedBy, setOptClaimedBy] = useState(item.claimedBy);
+    const [optStatus, setOptStatus] = useState(item.status);
+    const [optPurchaseStatus, setOptPurchaseStatus] = useState(item.purchaseStatus);
 
+    // Sync prop changes (server revalidation) to local state
     useEffect(() => {
-        if (isEditingTitle && titleInputRef.current) {
-            titleInputRef.current.focus();
-        }
-    }, [isEditingTitle]);
+        setOptClaimedBy(item.claimedBy);
+        setOptStatus(item.status);
+        setOptPurchaseStatus(item.purchaseStatus);
+    }, [item.claimedBy, item.status, item.purchaseStatus]);
+
+    // Computed checks using OPTIMISTIC state
+    const isPurchased = optPurchaseStatus === "Purchased";
+    const isClaimedByMe = currentUser?.email && optClaimedBy === currentUser.email;
+    const isClaimed = !!optClaimedBy;
 
     const handleClaim = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (!currentUser) return;
 
+        // Optimistic Update
+        setOptClaimedBy(currentUser.email);
         setIsClaiming(true);
-        await claimItem(item.id);
+
+        const success = await claimItem(item.id);
+
+        if (!success) {
+            // Revert on failure
+            setOptClaimedBy(item.claimedBy);
+        }
         setIsClaiming(false);
     };
 
@@ -59,21 +74,43 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
         e.stopPropagation();
         if (!currentUser) return;
 
-        setIsClaiming(true); // Re-use loading state
-        await unclaimItem(item.id);
+        // Optimistic Update
+        setOptClaimedBy(undefined); // Visually unclaim immediately
+        setIsClaiming(true);
+
+        const success = await unclaimItem(item.id);
+
+        if (!success) {
+            setOptClaimedBy(currentUser.email); // Revert
+        }
         setIsClaiming(false);
     };
 
     const handleStatusUpdate = async (type: "Archive" | "Active" | "Purchased") => {
-        setIsUpdating(true);
+        // Optimistic Updates
         setShowMenu(false);
+        const prevStatus = optStatus;
+        const prevPurchaseStatus = optPurchaseStatus;
 
         if (type === "Archive") {
-            await updateStatus(item.id, { status: "Archived" });
+            setOptStatus("Archived");
         } else if (type === "Active") {
-            await updateStatus(item.id, { status: "Active", purchaseStatus: "Unpurchased" });
+            setOptStatus("Active");
+            setOptPurchaseStatus("Unpurchased");
         } else if (type === "Purchased") {
-            await updateStatus(item.id, { purchaseStatus: "Purchased" });
+            setOptPurchaseStatus("Purchased");
+        }
+
+        setIsUpdating(true);
+        const success = await updateStatus(item.id, {
+            status: type === "Archive" || type === "Active" ? type === "Archive" ? "Archived" : "Active" : undefined,
+            purchaseStatus: type === "Purchased" ? "Purchased" : type === "Active" ? "Unpurchased" : undefined
+        });
+
+        if (!success) {
+            // Revert
+            setOptStatus(prevStatus);
+            setOptPurchaseStatus(prevPurchaseStatus);
         }
         setIsUpdating(false);
     }
@@ -113,7 +150,7 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
                         fill
                         className={cn(
                             "object-cover transition-transform duration-700 group-hover:scale-105",
-                            item.isClaimed && "grayscale-[50%]" // Slight greyscale when claimed
+                            isClaimed && "grayscale-[50%]" // Slight greyscale when claimed
                         )}
                         onError={() => setImageError(true)}
                     />
@@ -146,10 +183,10 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
                 )}
 
                 {/* Claimed Overlay (Only if NOT claimed by me, so we see "Claimed" by others overlay) */}
-                {item.isClaimed && !isClaimedByMe && (
+                {isClaimed && !isClaimedByMe && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px]">
                         <div className="px-3 py-1 bg-background/90 text-foreground rounded-full text-xs font-bold shadow-xl border border-border/50">
-                            Claimed by {item.claimedBy?.split('@')[0]}
+                            Claimed by {optClaimedBy?.split('@')[0]}
                         </div>
                     </div>
                 )}
@@ -273,7 +310,7 @@ export function ItemCard({ item, currentUser, isArchiveView }: ItemCardProps) {
                             <Check size={12} strokeWidth={3} />
                             Purchased
                         </div>
-                    ) : !item.isClaimed && currentUser ? (
+                    ) : !isClaimed && currentUser ? (
                         <button
                             onClick={handleClaim}
                             disabled={isClaiming}
